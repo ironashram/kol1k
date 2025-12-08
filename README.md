@@ -22,14 +22,28 @@ modprobe kvm_amd nested=1
     cd terraform
     ```
 
-2.  Create a `terraform.tfvars` file to store your secrets (DO NOT COMMIT THIS FILE):
+2.  Create a `terraform.tfvars` file to configure your environment:
+
+    > **Note:** Sensitive secrets (like Synology credentials) are assumed to be retrieved from your Vault/Bao server or a separate secure mechanism.
+
     ```hcl
-    synology_host     = "https://192.168.1.100:5001"
-    synology_user     = "admin_user"
-    synology_password = "your_secure_password"
-    ssh_public_key    = "ssh-rsa AAAAB3..."
-    storage_pool      = "default" # Check your VMM storage name
-    network_name      = "Default" # Check your VMM network name
+    # Storage & Paths
+    storage_pool          = "default"            # Your VMM Storage Pool name
+    shared_folder_path    = "/volume1/terraform" # Path on NAS to store cloud images
+
+    # Network Mapping (Match these to your Synology VMM Network names)
+    mgmt_network_name     = "Default"            # Management/API network
+    provider_network_name = "Default"            # External/Provider network
+    tenant_network_name   = "Default"            # Internal/Tenant network
+
+    # IP Configuration (First 3 octets)
+    mgmt_ip_base          = "192.168.1"          # Subnet for management (e.g., 192.168.1.x)
+    provider_ip_base      = "10.0.1"             # Subnet for provider network
+    tenant_ip_base        = "10.0.2"             # Subnet for tenant network
+
+    # Cluster Size
+    control_count         = 3
+    compute_count         = 2
     ```
 
 3.  Initialize and Apply:
