@@ -5,7 +5,7 @@ resource "synology_filestation_file" "ubuntu_image" {
 }
 
 resource "synology_virtualization_image" "ubuntu_noble" {
-  name         = "ubuntu-noble-cloud"
+  name         = "ubuntu-noble-cloud-kol1k"
   path         = synology_filestation_file.ubuntu_image.path
   storage_name = var.storage_pool
   image_type   = "disk"

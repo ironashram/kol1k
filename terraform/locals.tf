@@ -5,6 +5,6 @@ locals {
   compute_mgmt_macs     = [for i in range(var.compute_count) : format("02:00:00:01:11:%02x", i + 1)]
   compute_provider_macs = [for i in range(var.compute_count) : format("02:00:00:01:12:%02x", i + 1)]
   compute_tenant_macs   = [for i in range(var.compute_count) : format("02:00:00:01:20:%02x", i + 1)]
-  domain_name           = data.vault_kv_secret_v2.openstack.data.domain_name
-  ssh_public_key        = data.vault_kv_secret_v2.openstack.data.ssh_public_key
+  domain_name           = data.vault_generic_secret.openstack.data["domain_name"]
+  ssh_public_key        = data.vault_generic_secret.openstack.data["ssh_public_key"]
 }
