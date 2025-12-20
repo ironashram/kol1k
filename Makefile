@@ -61,7 +61,7 @@ upgrade:
 .PHONY: FORCE
 %: FORCE
 	@if [ "$(MAKECMDGOALS)" != "help" ] \
-		&& [ "$(MAKECMDGOALS)" == "" ]; then \
+		&& [ "$(MAKECMDGOALS)" = "" ]; then \
 		echo "No targets specified, check README.md"; \
 		exit 1; \
 	fi
