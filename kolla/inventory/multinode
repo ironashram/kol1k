@@ -1,14 +1,14 @@
 # These initial groups are the only groups required to be modified. The
 # additional groups are for more control of the environment.
 
+[all:vars]
+ansible_user=ubuntu
+ansible_python_interpreter=auto_silent
+
 [control]
 kol1k-control-1
 kol1k-control-2
 kol1k-control-3
-
-[control:vars]
-ansible_user=ubuntu
-ansible_python_interpreter=auto_silent
 
 [network]
 kol1k-control-1
@@ -18,10 +18,6 @@ kol1k-control-3
 [compute]
 kol1k-compute-1
 kol1k-compute-2
-
-[compute:vars]
-ansible_user=ubuntu
-ansible_python_interpreter=auto_silent
 
 [monitoring]
 kol1k-control-1
