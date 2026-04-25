@@ -83,25 +83,31 @@ resource "synology_virtualization_guest" "control_nodes" {
   storage_name = var.storage_pool
   vcpu_num     = var.control_vcpu_count
   vram_size    = var.control_memory_mb
+  machine_type = "q35"
 
   network {
-    name = var.mgmt_network_name
-    mac  = local.control_mgmt_macs[count.index]
+    name  = var.mgmt_network_name
+    mac   = local.control_mgmt_macs[count.index]
+    model = 1
   }
 
   network {
-    name = var.provider_network_name
-    mac  = local.control_provider_macs[count.index]
+    name  = var.provider_network_name
+    mac   = local.control_provider_macs[count.index]
+    model = 1
   }
 
   network {
-    name = var.tenant_network_name
-    mac  = local.control_tenant_macs[count.index]
+    name  = var.tenant_network_name
+    mac   = local.control_tenant_macs[count.index]
+    model = 1
   }
 
   disk {
-    image_id = synology_virtualization_image.ubuntu_noble.id
-    size     = var.control_disk_mb
+    image_id   = synology_virtualization_image.ubuntu_noble.id
+    size       = var.control_disk_mb
+    controller = 64
+    unmap      = true
   }
 
   iso {
@@ -183,25 +189,31 @@ resource "synology_virtualization_guest" "compute_nodes" {
   storage_name = var.storage_pool
   vcpu_num     = var.compute_vcpu_count
   vram_size    = var.compute_memory_mb
+  machine_type = "q35"
 
   network {
-    name = var.mgmt_network_name
-    mac  = local.compute_mgmt_macs[count.index]
+    name  = var.mgmt_network_name
+    mac   = local.compute_mgmt_macs[count.index]
+    model = 1
   }
 
   network {
-    name = var.provider_network_name
-    mac  = local.compute_provider_macs[count.index]
+    name  = var.provider_network_name
+    mac   = local.compute_provider_macs[count.index]
+    model = 1
   }
 
   network {
-    name = var.tenant_network_name
-    mac  = local.compute_tenant_macs[count.index]
+    name  = var.tenant_network_name
+    mac   = local.compute_tenant_macs[count.index]
+    model = 1
   }
 
   disk {
-    image_id = synology_virtualization_image.ubuntu_noble.id
-    size     = var.compute_disk_mb
+    image_id   = synology_virtualization_image.ubuntu_noble.id
+    size       = var.compute_disk_mb
+    controller = 64
+    unmap      = true
   }
 
   iso {

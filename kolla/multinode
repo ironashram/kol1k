@@ -7,22 +7,16 @@ ansible_python_interpreter=auto_silent
 
 [control]
 kol1k-control-1
-kol1k-control-2
-kol1k-control-3
 
 [network]
 kol1k-control-1
-kol1k-control-2
-kol1k-control-3
 
 [compute]
+kol1k-control-1
 kol1k-compute-1
-kol1k-compute-2
 
 [monitoring]
 kol1k-control-1
-kol1k-control-2
-kol1k-control-3
 
 # When compute nodes and control nodes use different interfaces,
 # you need to comment out "api_interface" and other interfaces from the globals.yml

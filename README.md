@@ -55,47 +55,35 @@ modprobe kvm_amd nested=1
 
 ## Step 2: Prepare for Kolla Ansible
 
-1.  **Get IP Addresses:** Check your Synology VMM console or router to find the IP addresses assigned to the new VMs.
-2.  **Update Inventory:** Edit `kolla/inventory/multinode` and replace the placeholder IPs (`192.168.1.x`) with the actual IPs.
-3.  **SSH Connectivity:** Ensure you can SSH into all nodes from your deployment machine using the key you provided in Terraform:
+1.  **SSH Connectivity:** Ensure your deployment host can SSH to all nodes by hostname using the key you provided in Terraform:
     ```bash
-    ssh ubuntu@<control-node-ip>
+    ssh ubuntu@kol1k-control-1
     ```
+    Hostnames are static-assigned via cloud-init network config (see `terraform/nodes.tf`); add /etc/hosts entries if your DNS does not cover them.
 
 ## Step 3: Deploy OpenStack
-1.  Create Kolla virtual env
-    ```bash
-    sudo mkdir -p /etc/kolla
-    sudo chown -R ${USER}:${USER} /etc/kolla
-    python -m venv .kolla-venv
-    source .kolla-venv/bin/activate
-    ```
 
-2.  Install Kolla Ansible (ensure you use a version compatible with Ubuntu 24.04, likely master or a recent release):
-    ```bash
-    pip install git+https://opendev.org/openstack/kolla-ansible@stable/2025.2
-    kolla-ansible install-deps
-    ```
+The repo's `kolla/` directory is symlinked to `/etc/kolla` so all kolla-ansible config (globals, inventory, passwords, certificates) lives in-tree. Set up once:
 
-3.  Copy the configuration:
-    ```bash
-    cp kolla/globals.yml /etc/kolla/globals.yml
-    cp kolla/inventory/multinode .
-    ```
+```bash
+sudo ln -s "$PWD/kolla" /etc/kolla
+python -m venv .kolla-venv
+source .kolla-venv/bin/activate
+pip install git+https://opendev.org/openstack/kolla-ansible@stable/2025.2
+kolla-ansible install-deps
+kolla-genpwd
+```
 
-4.  Generate passwords:
-    ```bash
-    kolla-genpwd
-    ```
+Then bootstrap and deploy:
 
-5.  Bootstrap and Deploy:
-    ```bash
-    cd /etc/kolla
-    kolla-ansible bootstrap-servers -i multinode
-    kolla-ansible prechecks -i multinode
-    kolla-ansible deploy -i multinode
-    kolla-ansible post-deploy
-    ```
+```bash
+kolla-ansible bootstrap-servers -i /etc/kolla/multinode
+kolla-ansible prechecks       -i /etc/kolla/multinode
+kolla-ansible deploy          -i /etc/kolla/multinode
+kolla-ansible post-deploy
+```
+
+`kolla/passwords.yml` and `kolla/certificates/` are gitignored.
 
 ## Notes
 

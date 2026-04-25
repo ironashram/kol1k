@@ -3,3 +3,7 @@
 *.tfplan
 terraform/.terraform*
 kolla-ansible
+.kolla-venv
+kolla/*
+!kolla/globals.yml
+!kolla/multinode

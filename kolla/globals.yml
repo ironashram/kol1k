@@ -26,12 +26,13 @@ enable_glance: "yes"
 enable_nova: "yes"
 enable_keystone: "yes"
 enable_haproxy: "yes"
-enable_skyline: "yes"
+enable_skyline: "no"
+enable_prometheus: "yes"
 
 # --- Service Configuration ---
 nova_compute_virt_type: "qemu"
 nova_libvirt_cpu_mode: "host-model"
-neutron_plugin_agent: "ovn"
+neutron_plugin_agent: "openvswitch"
 enable_neutron_provider_networks: "yes"
 
 # --- OpenStack Release ---
@@ -40,8 +41,6 @@ openstack_release: "2025.2"
 # -- TLS Configuration ---
 kolla_enable_tls_internal: "no"
 kolla_enable_tls_backend: "no"
+kolla_enable_tls_external: "no"
 kolla_copy_ca_into_containers: "no"
-
-kolla_enable_tls_external: "yes"
-kolla_external_fqdn: "openstack.example.com"
-kolla_external_fqdn_cert: "/etc/kolla/certificates/openstack.pem"
+kolla_external_fqdn: "10.128.0.3"

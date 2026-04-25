@@ -4,7 +4,7 @@ variable "remote_state_s3_endpoint" {
 
 variable "storage_pool" {
   type        = string
-  default     = "storage"
+  default     = "k8storage"
   description = "Name of the storage pool in Synology VMM"
 }
 
@@ -52,13 +52,13 @@ variable "tenant_ip_base" {
 
 variable "control_count" {
   type        = number
-  default     = 3
+  default     = 1
   description = "Number of control nodes to create"
 }
 
 variable "compute_count" {
   type        = number
-  default     = 2
+  default     = 1
   description = "Number of compute nodes to create"
 }
 
@@ -76,13 +76,13 @@ variable "compute_vcpu_count" {
 
 variable "control_memory_mb" {
   type        = number
-  default     = 6144
+  default     = 8192
   description = "Amount of memory (in MB) for each control node"
 }
 
 variable "control_vcpu_count" {
   type        = number
-  default     = 2
+  default     = 4
   description = "Number of vCPUs for each control node"
 }
 
@@ -94,7 +94,7 @@ variable "compute_disk_mb" {
 
 variable "control_disk_mb" {
   type        = number
-  default     = 51200
+  default     = 81920
   description = "Disk size (in MB) for each control node"
 }
 

@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     synology = {
-      source  = "synology-community/synology"
-      version = "0.6.4"
+      source  = "ironashram/synology"
+      version = "0.7.0-ironashram"
     }
     vault = {
       source  = "hashicorp/vault"
