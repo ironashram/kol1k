@@ -53,8 +53,6 @@ ethernets:
     match:
       macaddress: "${local.control_provider_macs[count.index]}"
     set-name: eth1
-    addresses:
-      - "${var.provider_ip_base}.${count.index + 11}/24"
     dhcp4: false
     dhcp6: false
   eth2:
@@ -159,8 +157,6 @@ ethernets:
     match:
       macaddress: "${local.compute_provider_macs[count.index]}"
     set-name: eth1
-    addresses:
-      - "${var.provider_ip_base}.${count.index + 21}/24"
     dhcp4: false
     dhcp6: false
   eth2:
