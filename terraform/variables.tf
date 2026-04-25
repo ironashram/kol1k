@@ -76,7 +76,7 @@ variable "compute_vcpu_count" {
 
 variable "control_memory_mb" {
   type        = number
-  default     = 8192
+  default     = 10240
   description = "Amount of memory (in MB) for each control node"
 }
 
