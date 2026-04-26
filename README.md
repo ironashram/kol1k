@@ -1,13 +1,8 @@
 # OpenStack on Synology NAS
 
-This project bootstraps an OpenStack cluster on a Synology NAS using Terraform for VM provisioning and Kolla Ansible for OpenStack deployment.
+This project bootstraps an OpenStack cluster on a Synology NAS using Terraform for VM provisioning and Kolla Ansible for OpenStack deployment. The cluster is sized and configured as a test bed for [kronos-openstack](https://github.com/kronos-openstack/kronos), a Prometheus-driven workload rebalancer for OpenStack.
 
 ## Prerequisites
-
-```
-modprobe -r kvm_amd
-modprobe kvm_amd nested=1
-```
 
 1.  **Synology NAS** with "Virtual Machine Manager" installed.
 2.  **Terraform** installed on your local machine.
@@ -55,11 +50,7 @@ modprobe kvm_amd nested=1
 
 ## Step 2: Prepare for Kolla Ansible
 
-1.  **SSH Connectivity:** Ensure your deployment host can SSH to all nodes by hostname using the key you provided in Terraform:
-    ```bash
-    ssh ubuntu@kol1k-control-1
-    ```
-    Hostnames are static-assigned via cloud-init network config (see `terraform/nodes.tf`); add /etc/hosts entries if your DNS does not cover them.
+1.  **SSH Connectivity:** Ensure your deployment host can SSH to all nodes by hostname using the key you provided in Terraform. Hostnames are static-assigned via cloud-init network config (see `terraform/nodes.tf`); add /etc/hosts entries if your DNS does not cover them.
 
 ## Step 3: Deploy OpenStack
 
@@ -83,9 +74,20 @@ kolla-ansible deploy          -i /etc/kolla/multinode
 kolla-ansible post-deploy
 ```
 
-`kolla/passwords.yml` and `kolla/certificates/` are gitignored.
+Everything under `kolla/` is gitignored except `globals.yml` and `multinode` (allowlist in `.gitignore`), so generated state (`passwords.yml`, `certificates/`, `admin-openrc.sh`, etc.) stays local.
 
 ## Notes
 
-*   **Storage:** Cinder is disabled. Compute nodes use their local 100GB disks for VM storage.
-*   **Virtualization:** `nova_compute_virt_type` is set to `qemu` in `globals.yml` for compatibility. If your NAS supports nested virtualization, you can try changing this to `kvm`.
+*   **Synology provider fork:** `terraform/versions.tf` pins `ironashram/synology@0.7.0-ironashram`, which adds the `guest.set` hardware-config path plus `machine_type`, virtio NIC `model`, and disk `controller`/`unmap` schema. Upstream `synology-community/synology` lacks these and forces manual VMM tweaks per VM.
+*   **Default size is minimal:** 1 control + 1 compute (control also runs `nova-compute`). Bump `control_count` / `compute_count` for HA.
+*   **Networking:** ML2/OpenVSwitch with three NICs per node (mgmt / provider / tenant). The provider NIC is left without a host IP so Neutron can plumb it into `br-ex`.
+*   **Storage:** Cinder is disabled. Compute nodes use their local disk for VM storage. Live migration is block-migration (no shared storage).
+*   **Virtualization:** `nova_compute_virt_type` is set to `qemu` in `globals.yml` for compatibility. If your NAS supports nested virtualization, switch to `kvm` and enable nested mode on the host before creating the VMs (substitute `kvm_intel` on Intel hardware):
+
+    ```bash
+    modprobe -r kvm_amd
+    modprobe kvm_amd nested=1
+    ```
+
+    Without this, guests run TCG-only — fine for cirros functional testing but ~10x slower than near-native.
+*   **Prometheus:** Trimmed to `node` + `libvirt` exporters (cadvisor, alertmanager, openstack-exporter, etc. disabled). Sufficient for kronos-style imbalance detection; cuts containers and CPU footprint.
