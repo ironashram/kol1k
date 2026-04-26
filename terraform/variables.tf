@@ -64,7 +64,7 @@ variable "compute_count" {
 
 variable "compute_memory_mb" {
   type        = number
-  default     = 4096
+  default     = 6144
   description = "Amount of memory (in MB) for each compute node"
 }
 
