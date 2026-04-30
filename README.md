@@ -1,60 +1,53 @@
-# OpenStack on Synology NAS
+# OpenStack on libvirt
 
-This project bootstraps an OpenStack cluster on a Synology NAS using Terraform for VM provisioning and Kolla Ansible for OpenStack deployment. The cluster is sized and configured as a test bed for [kronos-openstack](https://github.com/kronos-openstack/kronos), a Prometheus-driven workload rebalancer for OpenStack.
+Bootstraps a small OpenStack cluster on a single libvirt host using OpenTofu for VM provisioning and Kolla Ansible for OpenStack deployment. Sized as a test bed for [kronos-openstack](https://github.com/kronos-openstack/kronos), a Prometheus-driven workload rebalancer for OpenStack.
 
 ## Prerequisites
 
-1.  **Synology NAS** with "Virtual Machine Manager" installed.
-2.  **Terraform** installed on your local machine.
-3.  **Python/Pip** installed for Kolla Ansible.
-4.  **SSH Access** enabled on your Synology NAS.
+1.  **libvirt host** with KVM and a working `default` storage pool. Nested KVM enabled on the hypervisor.
+2.  **OpenTofu** on your local machine.
+3.  **HashiCorp Vault** (or compatible) reachable, with a `kv/openstack-vars` entry containing `domain_name` and `ssh_public_key`.
+4.  **Python/Pip** for Kolla Ansible.
 
+## Step 1: Provision VMs with OpenTofu
 
-## Step 1: Provision VMs with Terraform
-
-1.  Navigate to the `terraform` directory:
+1.  From the repo root:
     ```bash
-    cd terraform
+    make plan
+    make apply
     ```
 
-2.  Create a `terraform.tfvars` file to configure your environment:
+    This creates:
+    *   3 libvirt networks: `kol1k-mgmt` (NAT, host on `.1`), `kol1k-provider` and `kol1k-tenant` (isolated, no IP, no DHCP - L2-only for Neutron).
+    *   1 base volume (Ubuntu Noble cloud image) and per-VM backing-store overlays in the default pool.
+    *   1 control + 2 compute VMs with three virtio NICs each, cloud-init from a generated cidata ISO.
 
-    > **Note:** Sensitive secrets (like Synology credentials) are assumed to be retrieved from your Vault/Bao server or a separate secure mechanism.
+2.  Override defaults via `terraform/terraform.tfvars` if needed:
 
     ```hcl
-    # Storage & Paths
-    storage_pool          = "default"            # Your VMM Storage Pool name
-    shared_folder_path    = "/volume1/terraform" # Path on NAS to store cloud images
-
-    # Network Mapping (Match these to your Synology VMM Network names)
-    mgmt_network_name     = "Default"            # Management/API network
-    provider_network_name = "Default"            # External/Provider network
-    tenant_network_name   = "Default"            # Internal/Tenant network
-
-    # IP Configuration (First 3 octets)
-    mgmt_ip_base          = "192.168.1"          # Subnet for management (e.g., 192.168.1.x)
-    provider_ip_base      = "10.0.1"             # Subnet for provider network
-    tenant_ip_base        = "10.0.2"             # Subnet for tenant network
-
-    # Cluster Size
-    control_count         = 3
-    compute_count         = 2
+    libvirt_uri        = "qemu:///system"
+    storage_pool       = "default"
+    mgmt_ip_base       = "192.168.130"
+    tenant_ip_base     = "192.168.132"
+    control_count      = 1
+    compute_count      = 2
+    control_vcpu_count = 8
+    control_memory_mb  = 16384
+    compute_vcpu_count = 4
+    compute_memory_mb  = 8192
     ```
 
-3.  Initialize and Apply:
-    ```bash
-    terraform init
-    terraform apply
-    ```
-    *This will download the Ubuntu Noble image to your NAS, create 5 VMs (3 control, 2 compute), and start them.*
+    Static IPs assigned by cloud-init: control-N at `<mgmt>.${10+N}`, compute-N at `<mgmt>.${20+N}`. Tenant IPs follow the same offsets on `tenant_ip_base`.
+
+3.  State lives in S3 (`tfdata-v2/openstack/terraform.tfstate`); set `TF_VAR_remote_state_s3_endpoint` and AWS creds in your env. The Makefile uses `tofu state` underneath; `make list`, `make rm '<addr>'`, `make show` etc. all work.
 
 ## Step 2: Prepare for Kolla Ansible
 
-1.  **SSH Connectivity:** Ensure your deployment host can SSH to all nodes by hostname using the key you provided in Terraform. Hostnames are static-assigned via cloud-init network config (see `terraform/nodes.tf`); add /etc/hosts entries if your DNS does not cover them.
+SSH connectivity: bare hostnames `kol1k-control-1`, `kol1k-compute-{1,2}` need to resolve to the mgmt IPs from your deployment host (e.g. via `~/.ssh/config.d/kol1k`). Cloud-init installs the `ubuntu` user with the SSH key from Vault and grants passwordless sudo.
 
 ## Step 3: Deploy OpenStack
 
-The repo's `kolla/` directory is symlinked to `/etc/kolla` so all kolla-ansible config (globals, inventory, passwords, certificates) lives in-tree. Set up once:
+The repo's `kolla/` directory is symlinked to `/etc/kolla` so kolla-ansible config (globals, inventory, passwords, certificates) lives in-tree. Set up once:
 
 ```bash
 sudo ln -s "$PWD/kolla" /etc/kolla
@@ -74,20 +67,17 @@ kolla-ansible deploy          -i /etc/kolla/multinode
 kolla-ansible post-deploy
 ```
 
-Everything under `kolla/` is gitignored except `globals.yml` and `multinode` (allowlist in `.gitignore`), so generated state (`passwords.yml`, `certificates/`, `admin-openrc.sh`, etc.) stays local.
+Everything under `kolla/` is gitignored except `globals.yml` and `multinode` (allowlist in `.gitignore`).
 
 ## Notes
 
-*   **Synology provider fork:** `terraform/versions.tf` pins `ironashram/synology@0.7.0-ironashram`, which adds the `guest.set` hardware-config path plus `machine_type`, virtio NIC `model`, and disk `controller`/`unmap` schema. Upstream `synology-community/synology` lacks these and forces manual VMM tweaks per VM.
-*   **Default size is minimal:** 1 control + 1 compute (control also runs `nova-compute`). Bump `control_count` / `compute_count` for HA.
-*   **Networking:** ML2/OpenVSwitch with three NICs per node (mgmt / provider / tenant). The provider NIC is left without a host IP so Neutron can plumb it into `br-ex`.
-*   **Storage:** Cinder is disabled. Compute nodes use their local disk for VM storage. Live migration is block-migration (no shared storage).
-*   **Virtualization:** `nova_compute_virt_type` is set to `qemu` in `globals.yml` for compatibility. If your NAS supports nested virtualization, switch to `kvm` and enable nested mode on the host before creating the VMs (substitute `kvm_intel` on Intel hardware):
-
+*   **Topology:** 1 control (kolla `control` + `network` + `monitoring`) + 2 compute. Control is control-only; nova-compute runs on the compute nodes only.
+*   **Networking plugin:** OVN (`neutron_plugin_agent: ovn` in `globals.yml`). Three NICs per node - eth0 mgmt with static IP + default route, eth1 provider (no IP, plumbed into `br-ex`), eth2 tenant.
+*   **Storage:** Cinder disabled. Compute nodes use local disk for instance storage. Live migration is block-migration only.
+*   **Virtualization:** `nova_compute_virt_type` is `qemu` (TCG) in `globals.yml`. If your hypervisor exposes nested KVM, flip to `kvm` for ~10x guest speed:
     ```bash
-    modprobe -r kvm_amd
-    modprobe kvm_amd nested=1
+    modprobe -r kvm_amd && modprobe kvm_amd nested=1   # or kvm_intel
     ```
-
-    Without this, guests run TCG-only — fine for cirros functional testing but ~10x slower than near-native.
-*   **Prometheus:** Trimmed to `node` + `libvirt` exporters (cadvisor, alertmanager, openstack-exporter, etc. disabled). Sufficient for kronos-style imbalance detection; cuts containers and CPU footprint.
+*   **Machine type:** the kolla VMs use `pc` (i440fx). q35 + the libvirt provider's auto-generated `pcie-root-port` controllers triggers a Linux 6.8 PCI-PM bug where virtio devices initialize stuck in D3cold and the kernel never sees `/dev/vda` - boot hangs in initramfs.
+*   **Cloud-init:** `unattended-upgrades` and `snapd` are purged on first boot (`apt purge` in runcmd) and snapd is pinned to priority `-10` via `/etc/apt/preferences.d/no-snapd` so it can never be reinstalled.
+*   **Prometheus:** trimmed to `node` and `libvirt` exporters (cadvisor, alertmanager, openstack-exporter, etc. disabled). Enough for kronos-style imbalance detection; minimizes container count and CPU footprint.

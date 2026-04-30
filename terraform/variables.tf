@@ -2,52 +2,52 @@ variable "remote_state_s3_endpoint" {
   description = "url for s3 backend"
 }
 
+variable "libvirt_uri" {
+  type        = string
+  default     = "qemu:///system"
+  description = "libvirt connection URI"
+}
+
 variable "storage_pool" {
   type        = string
-  default     = "k8storage"
-  description = "Name of the storage pool in Synology VMM"
+  default     = "default"
+  description = "Name of the libvirt storage pool"
 }
 
-variable "mgmt_network_name" {
+variable "ubuntu_image_url" {
   type        = string
-  default     = "openstack-mgmt"
-  description = "Name of the management network in Synology VMM"
+  default     = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+  description = "URL of the Ubuntu cloud image to fetch as the base volume"
 }
 
-variable "provider_network_name" {
+variable "mgmt_bridge_name" {
   type        = string
-  default     = "openstack-provider"
-  description = "Name of the provider network to attach VMs to"
+  default     = "kol1kmgmt0"
+  description = "Linux bridge name for the libvirt mgmt network"
 }
 
-variable "tenant_network_name" {
+variable "provider_bridge_name" {
   type        = string
-  default     = "openstack-tenant"
-  description = "Name of the tenant/internal network to attach VMs to"
+  default     = "kol1kprov0"
+  description = "Linux bridge name for the libvirt provider network"
 }
 
-variable "shared_folder_path" {
+variable "tenant_bridge_name" {
   type        = string
-  default     = "/NAS/terraform"
-  description = "Path to the shared folder on Synology NAS for images"
+  default     = "kol1ktnt0"
+  description = "Linux bridge name for the libvirt tenant network"
 }
 
 variable "mgmt_ip_base" {
   type        = string
-  default     = "10.128.0"
-  description = "Base IP for management network (e.g., 192.168.100)"
-}
-
-variable "provider_ip_base" {
-  type        = string
-  default     = "10.178.0"
-  description = "Base IP for provider network (e.g., 10.0.0)"
+  default     = "192.168.130"
+  description = "Base IP /24 for the management network"
 }
 
 variable "tenant_ip_base" {
   type        = string
-  default     = "10.228.0"
-  description = "Base IP for tenant/internal network (e.g., 172.16.0)"
+  default     = "192.168.132"
+  description = "Base IP /24 for the tenant network"
 }
 
 variable "control_count" {
@@ -58,44 +58,44 @@ variable "control_count" {
 
 variable "compute_count" {
   type        = number
-  default     = 1
+  default     = 2
   description = "Number of compute nodes to create"
 }
 
 variable "compute_memory_mb" {
   type        = number
-  default     = 6144
-  description = "Amount of memory (in MB) for each compute node"
+  default     = 8192
+  description = "Memory (MiB) for each compute node"
 }
 
 variable "compute_vcpu_count" {
   type        = number
-  default     = 2
-  description = "Number of vCPUs for each compute node"
+  default     = 4
+  description = "vCPUs for each compute node"
 }
 
 variable "control_memory_mb" {
   type        = number
-  default     = 10240
-  description = "Amount of memory (in MB) for each control node"
+  default     = 16384
+  description = "Memory (MiB) for each control node"
 }
 
 variable "control_vcpu_count" {
   type        = number
-  default     = 4
-  description = "Number of vCPUs for each control node"
+  default     = 8
+  description = "vCPUs for each control node"
 }
 
 variable "compute_disk_mb" {
   type        = number
   default     = 102400
-  description = "Disk size (in MB) for each compute node"
+  description = "Disk size (MiB) for each compute node"
 }
 
 variable "control_disk_mb" {
   type        = number
   default     = 81920
-  description = "Disk size (in MB) for each control node"
+  description = "Disk size (MiB) for each control node"
 }
 
 variable "dns1" {

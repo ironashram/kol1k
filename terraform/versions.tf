@@ -1,8 +1,8 @@
 terraform {
   required_providers {
-    synology = {
-      source  = "ironashram/synology"
-      version = "0.7.0-ironashram"
+    libvirt = {
+      source  = "dmacvicar/libvirt"
+      version = "0.9.7"
     }
     vault = {
       source  = "hashicorp/vault"
