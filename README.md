@@ -106,6 +106,6 @@ The role dispatches by inventory group: `ovs-exporter` on `[openvswitch]`, `ovn-
 
 **Prometheus scrape config**: `kolla/config/prometheus/prometheus.yml.d/ovs-ovn-exporter.yml`.
 
-**Grafana dashboards**: `kolla/config/grafana/dashboards/openstack/` is a symlink to `roles/ovs-ovn-exporter/files/` (4 dashboards). `kolla/config/grafana/provisioning.yaml` enables `foldersFromFilesStructure: true` so the subdir surfaces as a Grafana folder.
+**Grafana dashboards**: `kolla/config/grafana/provisioning.yaml` enables `foldersFromFilesStructure: true` so the subdir surfaces as a Grafana folder.
 
 **OVN socket exposure**: `ovn_{controller,nb_db,sb_db,northd}_extra_volumes` in `globals.yml` mount `/run/ovn` into the matching kolla containers so the exporters can read sockets/PIDs from the host.
