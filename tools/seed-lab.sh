@@ -13,7 +13,7 @@ CIRROS_IMAGE_NAME="${CIRROS_IMAGE_NAME:-cirros}"
 DOWNLOAD_DIR="${DOWNLOAD_DIR:-/tmp}"
 
 AGGREGATE_NAME="${AGGREGATE_NAME:-test-agg}"
-AGGREGATE_HOSTS="${AGGREGATE_HOSTS:-kol1k-control-1 kol1k-compute-1}"
+AGGREGATE_HOSTS="${AGGREGATE_HOSTS:-$(openstack hypervisor list -f value -c 'Hypervisor Hostname' | tr '\n' ' ')}"
 
 NETWORK_NAME="${NETWORK_NAME:-lab-net}"
 SUBNET_NAME="${SUBNET_NAME:-lab-subnet}"
@@ -27,12 +27,12 @@ SECGROUP_NAME="${SECGROUP_NAME:-lab-sg}"
 
 FLAVOR_NAME="${FLAVOR_NAME:-lab.tiny}"
 FLAVOR_VCPUS="${FLAVOR_VCPUS:-1}"
-FLAVOR_RAM="${FLAVOR_RAM:-256}"
+FLAVOR_RAM="${FLAVOR_RAM:-128}"
 FLAVOR_DISK="${FLAVOR_DISK:-1}"
 
-VM_COUNT="${VM_COUNT:-10}"
+VM_COUNT="${VM_COUNT:-20}"
 VM_PREFIX="${VM_PREFIX:-kronos-vm}"
-VM_TARGET_HOST="${VM_TARGET_HOST:-kol1k-compute-1}"
+VM_TARGET_HOST="${VM_TARGET_HOST:-$(openstack hypervisor list -f value -c 'Hypervisor Hostname' | head -n1)}"
 VM_CREATE_DELAY="${VM_CREATE_DELAY:-5}"
 
 log() { printf '[seed] %s\n' "$*"; }
@@ -97,6 +97,19 @@ ensure_secgroup() {
   log "security group $SECGROUP_NAME (icmp + ssh)"
 }
 
+ensure_quota() {
+  local project="${OS_PROJECT_NAME:-admin}"
+  local instances="${QUOTA_INSTANCES:-$(( VM_COUNT > 100 ? VM_COUNT : 100 ))}"
+  local cores="${QUOTA_CORES:-$(( instances * FLAVOR_VCPUS ))}"
+  local ram="${QUOTA_RAM:-$(( instances * FLAVOR_RAM ))}"
+  openstack quota set \
+    --instances "$instances" \
+    --cores "$cores" \
+    --ram "$ram" \
+    "$project" >/dev/null
+  log "quota: $project instances=$instances cores=$cores ram=${ram}MiB"
+}
+
 ensure_vms() {
   local net_id
   net_id=$(openstack network show "$NETWORK_NAME" -f value -c id)
@@ -125,6 +138,7 @@ ensure_image
 ensure_flavor
 ensure_network
 ensure_secgroup
+ensure_quota
 ensure_vms
 
 log "current servers:"

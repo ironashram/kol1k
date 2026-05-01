@@ -39,7 +39,7 @@ enable_prometheus_rabbitmq_exporter: "no"
 enable_prometheus_blackbox_exporter: "no"
 
 # --- Service Configuration ---
-nova_compute_virt_type: "qemu"
+nova_compute_virt_type: "kvm"
 nova_libvirt_cpu_mode: "host-model"
 neutron_plugin_agent: "ovn"
 enable_neutron_provider_networks: "yes"

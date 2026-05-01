@@ -78,7 +78,7 @@ Cinder is disabled; instance disks live on the compute node's local filesystem. 
 
 ## Virtualization
 
-`nova_compute_virt_type` is `qemu` (TCG) by default. If the hypervisor exposes nested KVM, flip to `kvm` for ~10x guest speed:
+`nova_compute_virt_type: kvm`. Requires nested KVM on the libvirt host, e.g. on AMD:
 
 ```bash
 modprobe -r kvm_amd && modprobe kvm_amd nested=1   # or kvm_intel
