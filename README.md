@@ -71,7 +71,7 @@ Everything under `kolla/` is gitignored except `globals.yml` and `multinode` (al
 
 ## Notes
 
-*   **Topology:** 1 control (kolla `control` + `network` + `monitoring`) + 2 compute. Control is control-only; nova-compute runs on the compute nodes only.
+*   **Topology:** control nodes run the API/DB/messaging plane plus the OVN databases. Compute nodes run nova-compute, openvswitch, ovn-controller, and act as OVN gateway chassis (`enable-chassis-as-gw` via `[network]` membership). Inventory `kolla/multinode` splits the over-loaded default `[network]` group: `[loadbalancer:children]` and `[neutron:children]` are pointed at `control` (kolla's stock template ties them to `network`, which would drag haproxy and neutron-server onto every gateway chassis), while `[network]` itself stays on the compute hosts. Adjust `control_count` / `compute_count` in `terraform/variables.tf` and the corresponding host lists in `kolla/multinode` to scale.
 *   **Networking plugin:** OVN (`neutron_plugin_agent: ovn` in `globals.yml`). Three NICs per node - eth0 mgmt with static IP + default route, eth1 provider (no IP, plumbed into `br-ex`), eth2 tenant.
 *   **Storage:** Cinder disabled. Compute nodes use local disk for instance storage. Live migration is block-migration only.
 *   **Virtualization:** `nova_compute_virt_type` is `qemu` (TCG) in `globals.yml`. If your hypervisor exposes nested KVM, flip to `kvm` for ~10x guest speed:
@@ -79,5 +79,9 @@ Everything under `kolla/` is gitignored except `globals.yml` and `multinode` (al
     modprobe -r kvm_amd && modprobe kvm_amd nested=1   # or kvm_intel
     ```
 *   **Machine type:** the kolla VMs use `pc` (i440fx). q35 + the libvirt provider's auto-generated `pcie-root-port` controllers triggers a Linux 6.8 PCI-PM bug where virtio devices initialize stuck in D3cold and the kernel never sees `/dev/vda` - boot hangs in initramfs.
-*   **Cloud-init:** `unattended-upgrades` and `snapd` are purged on first boot (`apt purge` in runcmd) and snapd is pinned to priority `-10` via `/etc/apt/preferences.d/no-snapd` so it can never be reinstalled.
-*   **Prometheus:** trimmed to `node` and `libvirt` exporters (cadvisor, alertmanager, openstack-exporter, etc. disabled). Enough for kronos-style imbalance detection; minimizes container count and CPU footprint.
+*   **Cloud-init:** `unattended-upgrades` and `snapd` are purged on first boot (`apt purge` in runcmd) and snapd is pinned to priority `-10` via `/etc/apt/preferences.d/no-snapd` so it can never be reinstalled. eth1/eth2 are flagged `optional: true` in netplan so `systemd-networkd-wait-online` doesn't stall on them.
+*   **Observability:** Prometheus + Grafana enabled in `globals.yml`. Trimmed to `node`, `libvirt`, and the host-level `ovs-exporter`/`ovn-exporter` set (other kolla exporters disabled).
+    *   `roles/ovs-ovn-exporter/` is a self-contained Ansible role that installs the two host exporters as systemd units (port `9475` ovs, `9476` ovn). Run via `ansible-playbook -i /etc/kolla/multinode ovn-exporter.yaml` from the repo root. The role dispatches based on inventory groups: ovs-exporter on `[openvswitch]`, ovn-exporter on `[ovn-database]`.
+    *   Prometheus scrape config in `kolla/config/prometheus/prometheus.yml.d/ovs-ovn-exporter.yml`.
+    *   `kolla/config/grafana/dashboards/openstack/` is a symlink to `roles/ovs-ovn-exporter/files/` (4 dashboards). `kolla/config/grafana/provisioning.yaml` enables `foldersFromFilesStructure: true` so the subdir becomes a Grafana folder.
+    *   OVN socket exposure for the exporters: `ovn_{controller,nb_db,sb_db,northd}_extra_volumes` in `globals.yml` mount `/run/ovn` into the matching containers.

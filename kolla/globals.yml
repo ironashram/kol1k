@@ -27,6 +27,7 @@ enable_nova: "yes"
 enable_keystone: "yes"
 enable_haproxy: "yes"
 enable_skyline: "no"
+enable_grafana: "yes"
 enable_prometheus: "yes"
 enable_prometheus_cadvisor: "no"
 enable_prometheus_alertmanager: "no"
@@ -42,6 +43,16 @@ nova_compute_virt_type: "qemu"
 nova_libvirt_cpu_mode: "host-model"
 neutron_plugin_agent: "ovn"
 enable_neutron_provider_networks: "yes"
+
+# --- OVN socket exposure for ovs-/ovn-exporter ---
+ovn_controller_extra_volumes:
+  - "/var/run/openvswitch/ovn-controller:/run/ovn:rw"
+ovn_nb_db_extra_volumes:
+  - "/run/ovn:/run/ovn:rw"
+ovn_sb_db_extra_volumes:
+  - "/run/ovn:/run/ovn:rw"
+ovn_northd_extra_volumes:
+  - "/run/ovn:/run/ovn:rw"
 
 # --- OpenStack Release ---
 openstack_release: "2025.2"

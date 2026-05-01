@@ -1,0 +1,7 @@
+# Systemd drop-in override for Kolla container dependencies
+# Managed by Ansible - do not edit manually
+
+[Unit]
+# Require OVS container to be running
+Requires={{ kolla_ovs_container_service }}
+After={{ kolla_ovs_container_service }}

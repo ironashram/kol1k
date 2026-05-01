@@ -9,7 +9,8 @@ ansible_python_interpreter=auto_silent
 kol1k-control-1
 
 [network]
-kol1k-control-1
+kol1k-compute-1
+kol1k-compute-2
 
 [compute]
 kol1k-compute-1
@@ -79,7 +80,7 @@ control
 compute
 
 [loadbalancer:children]
-network
+control
 
 [mariadb:children]
 control
@@ -97,7 +98,7 @@ control
 control
 
 [neutron:children]
-network
+control
 
 [openvswitch:children]
 network

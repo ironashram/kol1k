@@ -7,4 +7,6 @@ kolla-ansible
 kolla/*
 !kolla/globals.yml
 !kolla/multinode
+!kolla/config/
+!kolla/config/**
 kronos/secrets.conf

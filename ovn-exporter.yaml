@@ -1,0 +1,13 @@
+---
+# Install ovs-exporter on hosts running OVS (compute + network/control)
+# and ovn-exporter on hosts running OVN NB/SB databases.
+# The role's tasks/main.yml dispatches based on inventory groups
+# `openvswitch` and `ovn-database` (defined in kolla/multinode).
+#
+# Run with the kolla-ansible inventory:
+#   ansible-playbook -i /etc/kolla/multinode ovn-exporter.yaml
+
+- hosts: all
+  become: true
+  roles:
+    - role: ovs-ovn-exporter

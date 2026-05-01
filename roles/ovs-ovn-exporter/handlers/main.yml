@@ -1,0 +1,19 @@
+---
+- name: Restart ovs-exporter
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ ovs_exporter_service_name }}"
+    state: restarted
+    daemon_reload: true
+
+- name: Restart ovn-exporter
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ ovn_exporter_service_name }}"
+    state: restarted
+    daemon_reload: true
+
+- name: Reload systemd
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
