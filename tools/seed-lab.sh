@@ -23,7 +23,22 @@ SUBNET_POOL_START="${SUBNET_POOL_START:-10.178.0.100}"
 SUBNET_POOL_END="${SUBNET_POOL_END:-10.178.0.199}"
 SUBNET_GATEWAY="${SUBNET_GATEWAY:-10.178.0.1}"
 
+TENANT_NETWORK_NAME="${TENANT_NETWORK_NAME:-lab-tenant}"
+TENANT_SUBNET_NAME="${TENANT_SUBNET_NAME:-lab-tenant-subnet}"
+TENANT_SUBNET_CIDR="${TENANT_SUBNET_CIDR:-192.168.50.0/24}"
+TENANT_SUBNET_GATEWAY="${TENANT_SUBNET_GATEWAY:-192.168.50.1}"
+TENANT_POOL_START="${TENANT_POOL_START:-192.168.50.100}"
+TENANT_POOL_END="${TENANT_POOL_END:-192.168.50.199}"
+TENANT_DNS="${TENANT_DNS:-1.1.1.1}"
+
+ROUTER_NAME="${ROUTER_NAME:-lab-router}"
+
 SECGROUP_NAME="${SECGROUP_NAME:-lab-sg}"
+
+KEYPAIR_NAME="${KEYPAIR_NAME:-lab-key}"
+KEYPAIR_PUBKEY_FILE="${KEYPAIR_PUBKEY_FILE:-$HOME/.ssh/id_ed25519.pub}"
+
+TENANT_VM_NAME="${TENANT_VM_NAME:-lab-tenant-test}"
 
 FLAVOR_NAME="${FLAVOR_NAME:-lab.tiny}"
 FLAVOR_VCPUS="${FLAVOR_VCPUS:-1}"
@@ -74,9 +89,17 @@ ensure_network() {
     openstack network create \
       --provider-network-type flat \
       --provider-physical-network "$PHYSNET" \
+      --external \
       --share \
       "$NETWORK_NAME" >/dev/null
-    log "network $NETWORK_NAME created (flat on $PHYSNET)"
+    log "network $NETWORK_NAME created (flat on $PHYSNET, external)"
+  else
+    local is_external
+    is_external=$(openstack network show "$NETWORK_NAME" -f value -c "router:external")
+    if [ "$is_external" != "True" ]; then
+      openstack network set --external "$NETWORK_NAME" >/dev/null
+      log "network $NETWORK_NAME flagged external"
+    fi
   fi
   if ! openstack subnet show "$SUBNET_NAME" >/dev/null 2>&1; then
     openstack subnet create \
@@ -87,6 +110,54 @@ ensure_network() {
       "$SUBNET_NAME" >/dev/null
     log "subnet $SUBNET_NAME created ($SUBNET_CIDR pool $SUBNET_POOL_START-$SUBNET_POOL_END)"
   fi
+}
+
+ensure_tenant_network() {
+  if ! openstack network show "$TENANT_NETWORK_NAME" >/dev/null 2>&1; then
+    openstack network create \
+      --provider-network-type geneve \
+      "$TENANT_NETWORK_NAME" >/dev/null
+    log "network $TENANT_NETWORK_NAME created (geneve)"
+  fi
+  if ! openstack subnet show "$TENANT_SUBNET_NAME" >/dev/null 2>&1; then
+    openstack subnet create \
+      --network "$TENANT_NETWORK_NAME" \
+      --subnet-range "$TENANT_SUBNET_CIDR" \
+      --allocation-pool "start=$TENANT_POOL_START,end=$TENANT_POOL_END" \
+      --gateway "$TENANT_SUBNET_GATEWAY" \
+      --dns-nameserver "$TENANT_DNS" \
+      "$TENANT_SUBNET_NAME" >/dev/null
+    log "subnet $TENANT_SUBNET_NAME created ($TENANT_SUBNET_CIDR)"
+  fi
+}
+
+ensure_router() {
+  if ! openstack router show "$ROUTER_NAME" >/dev/null 2>&1; then
+    openstack router create "$ROUTER_NAME" >/dev/null
+    log "router $ROUTER_NAME created"
+  fi
+  if ! openstack router show "$ROUTER_NAME" -f value -c external_gateway_info \
+       | grep -q network_id; then
+    openstack router set --external-gateway "$NETWORK_NAME" "$ROUTER_NAME" >/dev/null
+    log "router $ROUTER_NAME gateway -> $NETWORK_NAME"
+  fi
+  local tenant_subnet_id
+  tenant_subnet_id=$(openstack subnet show "$TENANT_SUBNET_NAME" -f value -c id)
+  if ! openstack port list --router "$ROUTER_NAME" -f value -c "Fixed IP Addresses" \
+       | grep -q "$tenant_subnet_id"; then
+    openstack router add subnet "$ROUTER_NAME" "$TENANT_SUBNET_NAME" >/dev/null
+    log "router $ROUTER_NAME interface -> $TENANT_SUBNET_NAME"
+  fi
+}
+
+ensure_keypair() {
+  if openstack keypair show "$KEYPAIR_NAME" >/dev/null 2>&1; then return; fi
+  if [ ! -f "$KEYPAIR_PUBKEY_FILE" ]; then
+    echo "error: $KEYPAIR_PUBKEY_FILE not found (set KEYPAIR_PUBKEY_FILE)" >&2
+    exit 1
+  fi
+  openstack keypair create --public-key "$KEYPAIR_PUBKEY_FILE" "$KEYPAIR_NAME" >/dev/null
+  log "keypair $KEYPAIR_NAME created from $KEYPAIR_PUBKEY_FILE"
 }
 
 ensure_secgroup() {
@@ -124,6 +195,7 @@ ensure_vms() {
       --image "$CIRROS_IMAGE_NAME" \
       --network "$net_id" \
       --security-group "$SECGROUP_NAME" \
+      --key-name "$KEYPAIR_NAME" \
       "${host_arg[@]}" \
       "$name" >/dev/null
     log "vm $name created${VM_TARGET_HOST:+ on $VM_TARGET_HOST}"
@@ -133,13 +205,49 @@ ensure_vms() {
   log "vms: ${created} created this run"
 }
 
+ensure_tenant_test_vm() {
+  if ! openstack server show "$TENANT_VM_NAME" >/dev/null 2>&1; then
+    openstack server create \
+      --flavor "$FLAVOR_NAME" \
+      --image "$CIRROS_IMAGE_NAME" \
+      --network "$TENANT_NETWORK_NAME" \
+      --security-group "$SECGROUP_NAME" \
+      --key-name "$KEYPAIR_NAME" \
+      "$TENANT_VM_NAME" >/dev/null
+    log "vm $TENANT_VM_NAME created on $TENANT_NETWORK_NAME"
+  fi
+  local vm_port=""
+  local i
+  for i in $(seq 1 20); do
+    vm_port=$(openstack port list --server "$TENANT_VM_NAME" --network "$TENANT_NETWORK_NAME" -f value -c id | head -n1)
+    [ -n "$vm_port" ] && break
+    sleep 2
+  done
+  if [ -z "$vm_port" ]; then
+    log "warn: no port for $TENANT_VM_NAME on $TENANT_NETWORK_NAME after wait"
+    return
+  fi
+  local existing_fip
+  existing_fip=$(openstack floating ip list --port "$vm_port" -f value -c "Floating IP Address" | head -n1)
+  if [ -z "$existing_fip" ]; then
+    local new_fip
+    new_fip=$(openstack floating ip create "$NETWORK_NAME" -f value -c floating_ip_address)
+    openstack server add floating ip "$TENANT_VM_NAME" "$new_fip" >/dev/null
+    log "fip $new_fip -> $TENANT_VM_NAME"
+  fi
+}
+
 ensure_aggregate
 ensure_image
 ensure_flavor
 ensure_network
+ensure_tenant_network
+ensure_router
 ensure_secgroup
+ensure_keypair
 ensure_quota
 ensure_vms
+ensure_tenant_test_vm
 
 log "current servers:"
 openstack server list -c Name -c Status -c Host -c Networks
