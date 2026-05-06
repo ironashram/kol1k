@@ -54,6 +54,8 @@ ovn_sb_db_extra_volumes:
   - "/run/ovn:/run/ovn:rw"
 ovn_northd_extra_volumes:
   - "/run/ovn:/run/ovn:rw"
+ovn_sb_db_relay_extra_volumes:
+  - "/run/ovn:/run/ovn:rw"
 
 # --- OpenStack Release ---
 openstack_release: "2025.2"
