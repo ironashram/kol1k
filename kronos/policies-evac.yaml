@@ -1,0 +1,44 @@
+policies:
+  - name: test-agg-cpu-spread
+    mode: spread
+    aggregate: test-agg
+    weight: 0.5
+    imbalance_query: |
+      1 - avg by (instance) (
+        rate(node_cpu_seconds_total{mode="idle"}[5m])
+      )
+    host_label: instance
+    vm_profile_query: |
+      rate(libvirt_domain_info_cpu_time_seconds_total[5m])
+      / on(instance) group_left()
+        count by (instance) (node_cpu_seconds_total{mode="idle"})
+      * on(domain, instance) group_left(instance_id)
+        libvirt_domain_openstack_info
+    vm_profile_label: instance_id
+    vm_profile_label_type: nova_instance_uuid
+    vm_profile_fallback: host_average
+    threshold: 0.5
+    cooldown: 5m
+    max_migrations_per_cycle: 30
+
+  - name: test-agg-mem-spread
+    mode: spread
+    aggregate: test-agg
+    weight: 0.5
+    imbalance_query: |
+      1 - avg by (instance) (
+        node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes
+      )
+    host_label: instance
+    vm_profile_query: |
+      libvirt_domain_memory_stats_rss_bytes
+      / on(instance) group_left()
+        node_memory_MemTotal_bytes
+      * on(domain, instance) group_left(instance_id)
+        libvirt_domain_openstack_info
+    vm_profile_label: instance_id
+    vm_profile_label_type: nova_instance_uuid
+    vm_profile_fallback: host_average
+    threshold: 0.5
+    cooldown: 5m
+    max_migrations_per_cycle: 30
