@@ -1,5 +1,6 @@
 variable "remote_state_s3_endpoint" {
   description = "url for s3 backend"
+  default     = "s3.m1k.cloud"
 }
 
 variable "libvirt_uri" {
