@@ -17,3 +17,11 @@
   become: true
   ansible.builtin.systemd:
     daemon_reload: true
+
+- name: Reenable ovs-exporter
+  become: true
+  ansible.builtin.command: "systemctl reenable {{ ovs_exporter_service_name }}"
+
+- name: Reenable ovn-exporter
+  become: true
+  ansible.builtin.command: "systemctl reenable {{ ovn_exporter_service_name }}"

@@ -1,4 +1,13 @@
 ---
+- name: Install netcat for the database socket probes
+  become: true
+  ansible.builtin.package:
+    name: "{{ exporter_netcat_package }}"
+    state: present
+  when: >-
+    (ovs_exporter_enabled | bool and inventory_hostname in groups.get('openvswitch', []))
+    or (ovn_exporter_enabled | bool and inventory_hostname in groups.get('ovn-database', []))
+
 # OVS exporter: install on nodes in 'openvswitch' group (network + compute)
 - name: Include OVS exporter tasks
   include_tasks: ovs_exporter.yml

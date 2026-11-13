@@ -17,39 +17,11 @@ Both exporters complement each other for complete OVN/OVS visibility.
 
 ## Prerequisites
 
-Before running this role, ensure Kolla-Ansible is configured to expose the required sockets to the host.
+Kolla-Ansible 2026.1 or later. It mounts `/run/ovn` from the host into every OVN container (`ovn_controller`, `ovn_nb_db`, `ovn_sb_db`, `ovn_northd`, `ovn_sb_db_relay`) by default, so the sockets and PIDs are already on the host. Do not add `ovn_*_extra_volumes` for `/run/ovn`: the mount would be duplicated.
 
-### For OVS Exporter (ovn-controller)
+OVS sockets are **not required** for the OVN exporter. `system_id` and `hostname` labels derive from `os.Hostname()`; `system_type`/`system_version` come from `/etc/os-release`; NB/SB schema versions come from `GetSchema()` on the NB/SB databases. The OVN exporter unit waits for the vswitchd socket only on hosts that are also in the `openvswitch` group.
 
-Add to your Kolla configuration (`group_vars/all/ovs-exporter.yml`):
-
-```yaml
-ovn_controller_extra_volumes:
-  - "/var/run/openvswitch/ovn-controller:/run/ovn:rw"
-```
-
-### For OVN Exporter (NB/SB databases, northd)
-
-Add to your Kolla configuration (`group_vars/all/ovn-exporter.yml`):
-
-```yaml
-ovn_nb_db_extra_volumes:
-  - "/run/ovn:/run/ovn:rw"
-
-ovn_sb_db_extra_volumes:
-  - "/run/ovn:/run/ovn:rw"
-
-ovn_northd_extra_volumes:
-  - "/run/ovn:/run/ovn:rw"
-```
-
-OVS sockets are **not required** for the OVN exporter. `system_id` and `hostname` labels derive from `os.Hostname()`; `system_type`/`system_version` come from `/etc/os-release`; NB/SB schema versions come from `GetSchema()` on the NB/SB databases.
-
-Then reconfigure the OVN containers:
-
-```bash
-kolla-ansible -i inventory reconfigure -t ovn
-```
+The systemd units wait for the database sockets with `nc -U -z` (package from `exporter_netcat_package`, installed by the role) and are also `WantedBy=` the kolla container units, so they start again when kolla recreates those containers. Re-run the playbook after every kolla upgrade.
 
 ## Role Variables
 
@@ -97,7 +69,7 @@ The role includes sensible defaults for Kolla-Ansible deployments. Override thes
 | `kolla_ovs_log` | `/var/log/kolla/openvswitch/ovsdb-server.log` |
 | `kolla_vswitchd_log` | `/var/log/kolla/openvswitch/ovs-vswitchd.log` |
 | `kolla_ovn_controller_log` | `/var/log/kolla/openvswitch/ovn-controller.log` |
-| `kolla_ovn_controller_pid` | `/var/run/openvswitch/ovn-controller/ovn-controller.pid` |
+| `kolla_ovn_controller_pid` | `/run/ovn/ovn-controller.pid` |
 | `kolla_ovn_nb_socket` | `unix:/run/ovn/ovnnb_db.sock` |
 | `kolla_ovn_nb_ctl` | `unix:/run/ovn/ovnnb_db.ctl` |
 | `kolla_ovn_nb_pid` | `/run/ovn/ovnnb_db.pid` |
@@ -274,7 +246,7 @@ curl -s http://localhost:9476/metrics | wc -l
 | OVS log | `/var/log/openvswitch/ovsdb-server.log` | `/var/log/kolla/openvswitch/ovsdb-server.log` |
 | vswitchd log | `/var/log/openvswitch/ovs-vswitchd.log` | `/var/log/kolla/openvswitch/ovs-vswitchd.log` |
 | ovn-controller log | `/var/log/openvswitch/ovn-controller.log` | `/var/log/kolla/openvswitch/ovn-controller.log` |
-| ovn-controller PID | `/var/run/openvswitch/ovn-controller.pid` | `/var/run/openvswitch/ovn-controller/ovn-controller.pid` |
+| ovn-controller PID | `/var/run/openvswitch/ovn-controller.pid` | `/run/ovn/ovn-controller.pid` |
 
 ### OVN Exporter Paths
 

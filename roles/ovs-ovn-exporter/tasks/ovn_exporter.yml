@@ -7,6 +7,7 @@
         url: "https://api.github.com/repos/{{ ovn_exporter_github_repo }}/releases/latest"
         return_content: true
       register: ovn_github_release
+      check_mode: false
 
     - name: Set OVN exporter version from latest release
       ansible.builtin.set_fact:
@@ -143,6 +144,7 @@
     mode: '0644'
   notify:
     - Reload systemd
+    - Reenable ovn-exporter
     - Restart ovn-exporter
 
 # Install environment file

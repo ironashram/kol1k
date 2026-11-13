@@ -38,6 +38,7 @@ enable_prometheus_memcached_exporter: "no"
 enable_prometheus_mysqld_exporter: "no"
 enable_prometheus_rabbitmq_exporter: "no"
 enable_prometheus_blackbox_exporter: "no"
+enable_prometheus_openstack_network_exporter: "no"
 
 # --- Service Configuration ---
 nova_compute_virt_type: "kvm"
@@ -45,20 +46,8 @@ nova_libvirt_cpu_mode: "host-model"
 neutron_plugin_agent: "ovn"
 enable_neutron_provider_networks: "yes"
 
-# --- OVN socket exposure for ovs-/ovn-exporter ---
-ovn_controller_extra_volumes:
-  - "/var/run/openvswitch/ovn-controller:/run/ovn:rw"
-ovn_nb_db_extra_volumes:
-  - "/run/ovn:/run/ovn:rw"
-ovn_sb_db_extra_volumes:
-  - "/run/ovn:/run/ovn:rw"
-ovn_northd_extra_volumes:
-  - "/run/ovn:/run/ovn:rw"
-ovn_sb_db_relay_extra_volumes:
-  - "/run/ovn:/run/ovn:rw"
-
 # --- OpenStack Release ---
-openstack_release: "2025.2"
+openstack_release: "2026.1"
 
 # -- TLS Configuration ---
 kolla_enable_tls_internal: "no"

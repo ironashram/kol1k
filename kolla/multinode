@@ -60,18 +60,8 @@ monitoring
 [etcd:children]
 control
 
-[influxdb:children]
-monitoring
-
 [prometheus:children]
 monitoring
-
-[telegraf:children]
-compute
-control
-monitoring
-network
-storage
 
 [hacluster:children]
 control
@@ -168,9 +158,6 @@ control
 [bifrost:children]
 deployment
 
-[zun:children]
-control
-
 [skyline:children]
 control
 
@@ -197,10 +184,10 @@ common
 [fluentd:children]
 common
 
-[kolla-logs:children]
+[kolla_logs:children]
 common
 
-[kolla-toolbox:children]
+[kolla_toolbox:children]
 common
 
 [opensearch:children]
@@ -284,17 +271,34 @@ control
 compute
 network
 
+[neutron-ovn-vpn-agent:children]
+neutron
+
 # Cinder
 [cinder-api:children]
 cinder
 
 [cinder-backup:children]
+cinder
+
+[cinder-backup-lvm:children]
+storage
+
+[cinder-backup-multiple:children]
+cinder
 storage
 
 [cinder-scheduler:children]
 cinder
 
 [cinder-volume:children]
+cinder
+
+[cinder-volume-lvm:children]
+storage
+
+[cinder-volume-multiple:children]
+cinder
 storage
 
 # Cloudkitty
@@ -495,19 +499,6 @@ designate
 [placement-api:children]
 placement
 
-# Zun
-[zun-api:children]
-zun
-
-[zun-wsproxy:children]
-zun
-
-[zun-compute:children]
-compute
-
-[zun-cni-daemon:children]
-compute
-
 # Skyline
 [skyline-apiserver:children]
 skyline
@@ -564,6 +555,13 @@ monitoring
 
 [prometheus-libvirt-exporter:children]
 compute
+
+[prometheus-openstack-network-exporter:children]
+compute
+network
+
+[prometheus-valkey-exporter:children]
+valkey
 
 [masakari-api:children]
 control

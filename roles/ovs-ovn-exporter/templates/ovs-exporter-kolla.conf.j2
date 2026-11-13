@@ -2,12 +2,15 @@
 # Managed by Ansible - do not edit manually
 
 [Unit]
-After=docker.service {{ kolla_ovs_container_service }}
+# Require OVS container to be running
 Requires={{ kolla_ovs_container_service }}
+After={{ kolla_ovs_container_service }}
 
 [Service]
-# The kolla container unit goes active as soon as `docker start -a` runs,
-# before ovsdb-server inside opens /var/run/openvswitch/db.sock. Wait up to
-# 120s for the socket so the exporter does not race it and trip
-# StartLimitBurst at boot.
-ExecStartPre=/bin/sh -c 'for i in $(seq 1 120); do [ -S {{ kolla_ovs_socket | replace("unix:", "") }} ] && exit 0; sleep 1; done; exit 1'
+# The kolla container unit goes active as soon as `docker start -a` runs, before
+# ovsdb-server inside the container opens its socket. The socket file itself is
+# bind-mounted from the host and survives a container restart, so only an actual
+# connect distinguishes a listening database from a stale inode. Runs as root
+# because the service user reaches the socket through the binary's
+# cap_dac_override, which a probe process does not carry.
+ExecStartPre=+/bin/sh -c 'for i in $(seq 1 120); do nc -U -z /var/run/openvswitch/db.sock && exit 0; sleep 1; done; exit 1'

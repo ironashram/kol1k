@@ -40,7 +40,7 @@ The repo's `kolla/` directory is symlinked to `/etc/kolla` so kolla-ansible conf
 sudo ln -s "$PWD/kolla" /etc/kolla
 python -m venv .kolla-venv
 source .kolla-venv/bin/activate
-pip install git+https://opendev.org/openstack/kolla-ansible@stable/2025.2
+pip install git+https://opendev.org/openstack/kolla-ansible@stable/2026.1
 kolla-ansible install-deps
 kolla-genpwd
 ```
@@ -108,4 +108,4 @@ The role dispatches by inventory group: `ovs-exporter` on `[openvswitch]`, `ovn-
 
 **Grafana dashboards**: `kolla/config/grafana/provisioning.yaml` enables `foldersFromFilesStructure: true` so the subdir surfaces as a Grafana folder.
 
-**OVN socket exposure**: `ovn_{controller,nb_db,sb_db,northd}_extra_volumes` in `globals.yml` mount `/run/ovn` into the matching kolla containers so the exporters can read sockets/PIDs from the host.
+**OVN socket exposure**: since 2026.1 kolla mounts `/run/ovn` from the host into every OVN container by default, so the exporters read the sockets and PIDs (`/run/ovn/ovn-controller.pid` included) with no extra volumes in `globals.yml`.

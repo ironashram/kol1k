@@ -1,6 +1,13 @@
 [Unit]
 Description={{ ovs_exporter_description }}
 After=network.target
+# A database restart makes the exporter exit non-zero, which exhausts the default
+# limit of five starts in ten seconds and leaves the unit permanently failed.
+# ExecStartPre below waits out a restarting database, so attempts that are merely
+# waiting are spaced far enough apart to stay under this window, while an exporter
+# that is genuinely broken fails fast and still reaches the failed state.
+StartLimitIntervalSec=300
+StartLimitBurst=10
 
 [Service]
 User={{ ovs_exporter_user }}
@@ -9,6 +16,7 @@ EnvironmentFile=-/etc/sysconfig/{{ ovs_exporter_service_name }}
 EnvironmentFile=-/etc/default/{{ ovs_exporter_service_name }}
 ExecStart={{ exporter_install_dir }}/ovs-exporter $OPTIONS
 Restart=on-failure
+RestartSec=10
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=multi-user.target {{ kolla_ovs_container_service }}

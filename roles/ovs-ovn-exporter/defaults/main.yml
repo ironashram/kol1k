@@ -7,6 +7,9 @@ exporter_install_dir: "/usr/sbin"
 # Temp directory for downloads
 exporter_tmp_dir: "/tmp"
 
+# Provides the nc used by the systemd socket probes
+exporter_netcat_package: "{{ 'netcat-openbsd' if ansible_os_family == 'Debian' else 'nmap-ncat' }}"
+
 # OVS Exporter settings
 ovs_exporter_enabled: true
 ovs_exporter_github_repo: "lucadelmonte/ovs_exporter"
@@ -18,6 +21,7 @@ ovs_exporter_group: "ovs_exporter"
 ovs_exporter_description: "Prometheus OVS Exporter"
 # Minimum seconds between ovsdb queries
 ovs_exporter_poll_interval: 15
+ovs_exporter_poll_timeout: 2
 
 # OVN Exporter settings (only on controller/network nodes)
 ovn_exporter_enabled: true
@@ -30,6 +34,7 @@ ovn_exporter_group: "ovn_exporter"
 ovn_exporter_description: "Prometheus OVN Exporter"
 # Minimum seconds between NB/SB queries
 ovn_exporter_poll_interval: 15
+ovn_exporter_poll_timeout: 2
 
 # Kolla-specific paths
 kolla_ovs_socket: "unix:/var/run/openvswitch/db.sock"
@@ -37,7 +42,7 @@ kolla_ovs_data: "/var/lib/docker/volumes/openvswitch_db/_data/conf.db"
 kolla_ovs_log: "/var/log/kolla/openvswitch/ovsdb-server.log"
 kolla_vswitchd_log: "/var/log/kolla/openvswitch/ovs-vswitchd.log"
 kolla_ovn_controller_log: "/var/log/kolla/openvswitch/ovn-controller.log"
-kolla_ovn_controller_pid: "/var/run/openvswitch/ovn-controller/ovn-controller.pid"
+kolla_ovn_controller_pid: "/run/ovn/ovn-controller.pid"
 
 kolla_ovn_nb_socket: "unix:/run/ovn/ovnnb_db.sock"
 kolla_ovn_nb_ctl: "unix:/run/ovn/ovnnb_db.ctl"
